@@ -1,2 +1,2 @@
-# LearninigOpenGL2.0
+# LearningOpenGL2.0
 Learning OpenGL
