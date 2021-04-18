@@ -7,6 +7,9 @@
 #include "shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -15,6 +18,13 @@ GLfloat mixVisiability = 0.2f;
 
 int main()
 {
+    //glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
+    //std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl;
+    //glm::mat4 trans;
+    //trans = glm::translate(trans, glm::vec3(1.0f, 1.0f, 0.0f));
+    //vec = trans * vec;
+    //std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl;
+
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -52,7 +62,7 @@ int main()
 
     GLuint indices[] = {
         0, 1, 2,
-        0, 2, 3
+        0, 2, 3,
     };
 
     GLuint VAO, VBO, EBO;
@@ -77,29 +87,9 @@ int main()
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    // 纹理环绕
-    // GL_REPEAT	           对纹理的默认行为。重复纹理图像。
-    // GL_MIRRORED_REPEAT   和GL_REPEAT一样，但每次重复图片是镜像放置的。
-    // GL_CLAMP_TO_EDGE	   纹理坐标会被约束在0到1之间，超出的部分会重复纹理坐标的边缘，产生一种边缘被拉伸的效果。
-    // GL_CLAMP_TO_BORDER   超出的坐标为用户指定的边缘颜色。
-    // 
-    // 纹理环绕方式设置为GL_CLAMP_TO_BORDER时需要设置边缘颜色
-    //float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
-    //glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // 纹理过滤
-    // GL_LINEAR   线性过滤  - 更丝滑
-    // GL_NEAREST  邻近过滤  - 更清晰
-    // 多级渐远纹理
-    // GL_NEAREST_MIPMAP_NEAREST   使用最邻近的多级渐远纹理来匹配像素大小，并使用邻近插值进行纹理采样
-    // GL_LINEAR_MIPMAP_NEAREST    使用最邻近的多级渐远纹理级别，并使用线性插值进行采样
-    // GL_NEAREST_MIPMAP_LINEAR    在两个最匹配像素大小的多级渐远纹理之间进行线性插值，使用邻近插值进行采样
-    // GL_LINEAR_MIPMAP_LINEAR     在两个邻近的多级渐远纹理之间使用线性插值，并使用线性插值进行采样
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -141,6 +131,8 @@ int main()
     ourShader.use();
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
+    
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -155,7 +147,21 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture2);
         ourShader.setFloat("visiability", mixVisiability);
 
+        glm::mat4 trans;
+        // 操作顺序会影响执行结果
+        // 原因是矩阵乘法不满足交换律，不同的执行顺序得到的结果矩阵不同
+        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
+
         glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+        GLfloat scaleValue = std::abs(sin(glfwGetTime()));
+        trans = glm::scale(trans, glm::vec3(scaleValue, scaleValue, scaleValue));
+        glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
